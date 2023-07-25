@@ -1085,7 +1085,7 @@
 
             changes-s
             (->> stream
-                 (rx/filter #(or (dch/commit-changes? %)
+                 (rx/filter #(or (dch/commit? %)
                                  (ptk/type? % ::dwn/handle-file-change)))
                  (rx/observe-on :async))
 

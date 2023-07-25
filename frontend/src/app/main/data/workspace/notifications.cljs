@@ -196,10 +196,11 @@
      [:changes ::cpc/changes]]))
 
 (defn handle-file-change
-  [{:keys [file-id changes] :as msg}]
+  [{:keys [file-id changes revn] :as msg}]
+
   (dm/assert!
-   "expected valid arguments"
-   (sm/check! schema:handle-file-change msg))
+   "expected valid parameters"
+   (sm/valid? schema:handle-file-change msg))
 
   (ptk/reify ::handle-file-change
     IDeref
@@ -208,15 +209,11 @@
     ptk/WatchEvent
     (watch [_ state _]
       (let [page-id (:current-page-id state)
+
             position-data-operation?
             (fn [{:keys [type attr]}]
-              (and (= :set type) (= attr :position-data)))
-
-            ;;add-origin-session-id
-            ;;(fn [{:keys [] :as op}]
-            ;;  (cond-> op
-            ;;    (position-data-operation? op)
-            ;;    (update :val with-meta {:session-id (:session-id msg)})))
+              (and (= :set type)
+                   (= attr :position-data)))
 
             update-position-data
             (fn [change]
@@ -227,24 +224,22 @@
                      (= :mod-obj (:type change)))
                 (update :operations #(d/removev position-data-operation? %))))
 
-            process-page-changes
-            (fn [[page-id changes]]
-              (dch/update-indices page-id changes))
-
             ;; We update `position-data` from the incoming message
             changes (->> changes
-                         (mapv update-position-data)
-                         (d/removev (fn [change]
-                                      (and (= page-id (:page-id change))
-                                           (:ignore-remote? change)))))
+                         (map update-position-data)
+                         (remove (fn [change]
+                                   (and (= page-id (:page-id change))
+                                        (:ignore-remote? change))))
+                         (vec))]
 
-            changes-by-pages (group-by :page-id changes)]
-
-        (rx/merge
-         (rx/of (dwp/shapes-changes-persisted file-id (assoc msg :changes changes)))
-
-         (when-not (empty? changes-by-pages)
-           (rx/from (map process-page-changes changes-by-pages))))))))
+        ;; The commit event is responsible to apply the data localy
+        ;; and update the persistence internal state with the updated
+        ;; file-revn
+        (rx/of (dch/commit {:file-id file-id
+                            :file-revn revn
+                            :source :remote
+                            :redo-changes changes
+                            :undo-changes []}))))))
 
 (def ^:private
   schema:handle-library-change

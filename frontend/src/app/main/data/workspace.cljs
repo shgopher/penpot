@@ -36,6 +36,7 @@
    [app.main.data.fonts :as df]
    [app.main.data.messages :as msg]
    [app.main.data.users :as du]
+   [app.main.data.persistence :as dp]
    [app.main.data.workspace.bool :as dwb]
    [app.main.data.workspace.changes :as dch]
    [app.main.data.workspace.collapse :as dwco]
@@ -84,6 +85,7 @@
    [potok.core :as ptk]))
 
 (def default-workspace-local {:zoom 1})
+(log/set-level! :debug)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Workspace Initialization
@@ -334,15 +336,26 @@
              :workspace-presence {}))
 
     ptk/WatchEvent
-    (watch [_ _ _]
-      (rx/of msg/hide
-             (dcm/retrieve-comment-threads file-id)
-             (dwp/initialize-file-persistence file-id)
-             (fetch-bundle project-id file-id)))
+    (watch [_ _ stream]
+      (log/debug :hint "initialize-file" :file-id file-id)
+
+      (rx/merge
+       (rx/of msg/hide
+              (features/initialize)
+              (dcm/retrieve-comment-threads file-id)
+              (fetch-bundle project-id file-id))
+
+       ;; FIXME: add buffering (?)
+       (->> stream
+            (rx/filter dch/commit?)
+            (rx/map deref)
+            (rx/map dch/update-indexes)
+            (rx/take-until
+             (rx/filter (ptk/type? ::finalize-file) stream)))))
 
     ptk/EffectEvent
     (effect [_ _ _]
-      (let [name (str "workspace-" file-id)]
+      (let [name (dm/str "workspace-" file-id)]
         (unchecked-set ug/global "name" name)))))
 
 (defn finalize-file
@@ -359,7 +372,6 @@
               :workspace-libraries
               :workspace-ready?
               :workspace-media-objects
-              :workspace-persistence
               :workspace-presence
               :workspace-project
               :workspace-project

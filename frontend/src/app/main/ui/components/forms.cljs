@@ -106,7 +106,7 @@
                   (cond-> (and value is-checkbox?) (assoc :default-checked value))
                   (cond-> (and touched? (:message error)) (assoc "aria-invalid" "true"
                                                                  "aria-describedby" (dm/str "error-" input-name)))
-                  (obj/clj->props))
+                  (obj/map->obj obj/prop-key-fn))
 
         show-valid? (and show-success? touched? (not error))
         show-invalid? (and touched? error)]
@@ -244,7 +244,7 @@
                          :on-blur on-blur
                          ;; :placeholder label
                          :on-change on-change)
-                  (obj/clj->props))]
+                  (obj/map->obj obj/prop-key-fn))]
 
     [:div.custom-input
      {:class klass}

@@ -8,6 +8,9 @@
   "A collection of helpers for work with javascript objects."
   (:refer-clojure :exclude [set! new get get-in merge clone contains? array? into-array])
   (:require
+   ;; FIXME: we use goog.string here for performance reasons, pending
+   ;; to apply this optimizations directly to cuerdas.
+   [goog.string :as gstr]
    [cuerdas.core :as str]))
 
 (defn array?
@@ -87,9 +90,17 @@
 
 (defn- props-key-fn
   [key]
-  (if (or (= key :class) (= key :class-name))
-    "className"
-    (str/camel (name key))))
+  (let [k (name key)]
+    (cond
+      (or (= k "class")
+          (= k "class-name"))
+      "className"
+
+      (str/starts-with? k "data-")
+      k
+
+      :else
+      (str/camel k))))
 
 (defn clj->props
   [props]
@@ -99,28 +110,51 @@
   [obj prop]
   (js* "~{} in ~{}" prop obj))
 
+(defn- transform-prop-key
+  [s]
+  (let [result (js* "~{}.replace(\":\", \"-\").replace(/-./g, x=>x[1].toUpperCase())", s)]
+    (if ^boolean (gstr/startsWith s "-")
+      (gstr/capitalize result)
+      result)))
+
+(defn prop-key-fn
+  [k]
+  (when (string? k)
+    (cond
+      (or (= k "class")
+          (= k "class-name"))
+      "className"
+
+      (gstr/startsWith k "data-")
+      k
+
+      :else
+      (transform-prop-key k))))
+
 (defn map->obj
-  [x]
-  (cond
-    (nil? x)
-    nil
+  "A simplified version of clj->js with focus on performance"
+  ([x] (map->obj x identity))
+  ([x ^function key-fn]
+   (cond
+     (nil? x)
+     nil
 
-    (keyword? x)
-    (name x)
+     (keyword? x)
+     (name x)
 
-    (map? x)
-    (reduce-kv (fn [m k v]
-                 (let [k (if (keyword? k) (name k) k)]
-                   (unchecked-set m k (^function map->obj v))
-                   m))
-               #js {}
-               x)
+     (map? x)
+     (reduce-kv (fn [m k v]
+                  (let [k (if (keyword? k) (name k) k)]
+                    (unchecked-set m (key-fn k) (map->obj v key-fn))
+                    m))
+                #js {}
+                x)
 
-    (coll? x)
-    (reduce (fn [arr v]
-              (.push arr v)
-              arr)
-            (array)
-            x)
+     (coll? x)
+     (reduce (fn [arr v]
+               (.push arr v)
+               arr)
+             (array)
+             x)
 
-    :else x))
+     :else x)))

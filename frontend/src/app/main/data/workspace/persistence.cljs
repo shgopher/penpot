@@ -72,7 +72,7 @@
 
         (rx/merge
          (->> stream
-              (rx/filter dch/commit-changes?)
+              (rx/filter dch/commit?)
               (rx/map deref)
               (rx/filter local-file?)
               (rx/tap on-dirty)
@@ -122,7 +122,7 @@
 
          ;; Synchronous changes
          (->> stream
-              (rx/filter dch/commit-changes?)
+              (rx/filter dch/commit?)
               (rx/map deref)
               (rx/filter library-file?)
               (rx/filter (complement #(empty? (:changes %))))
@@ -135,7 +135,7 @@
   [file-id file-revn changes pending-commits]
   (log/debug :hint "persist changes" :changes (count changes))
   (dm/assert! (uuid? file-id))
-  (ptk/reify ::persist-changes
+  #_(ptk/reify ::persist-changes
     ptk/WatchEvent
     (watch [_ state _]
       (let [sid      (:session-id state)
