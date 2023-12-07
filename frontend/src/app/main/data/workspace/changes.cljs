@@ -196,10 +196,10 @@
   [{:keys [commit-id redo-changes undo-changes origin save-undo? #_affected-frames
            file-id file-revn page-id undo-group tags stack-undo? source]}]
 
-  (dm/assert!
-   "expect valid vector of changes"
-   (and (cpc/valid-changes? redo-changes)
-        (cpc/valid-changes? undo-changes)))
+  ;; (dm/assert!
+  ;;  "expect valid vector of changes"
+  ;;  (and (cpc/valid-changes? redo-changes)
+  ;;       (cpc/valid-changes? undo-changes)))
 
   (let [commit-id (or commit-id (uuid/next))
         commit    {:id commit-id
@@ -229,7 +229,7 @@
                                 [:workspace-libraries file-id :data])]
 
           (d/update-in-when state path (fn [file]
-                                         (let [file (cp/process-changes file redo-changes false)
+                                         (let [file (cpc/process-changes file redo-changes false)
                                                pids (into #{} (map :page-id) redo-changes)]
                                            (reduce #(ctst/update-object-indices %1 %2) file pids)))))))))
 

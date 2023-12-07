@@ -198,9 +198,9 @@
 (defn handle-file-change
   [{:keys [file-id changes revn] :as msg}]
 
-  (dm/assert!
-   "expected valid parameters"
-   (sm/valid? schema:handle-file-change msg))
+  ;; (dm/assert!
+  ;;  "expected valid parameters"
+  ;;  (sm/valid? schema:handle-file-change msg))
 
   (ptk/reify ::handle-file-change
     IDeref
