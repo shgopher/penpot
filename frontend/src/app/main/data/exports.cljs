@@ -8,7 +8,7 @@
   (:require
    [app.common.uuid :as uuid]
    [app.main.data.modal :as modal]
-   [app.main.data.workspace.persistence :as dwp]
+   [app.main.data.persistence :as dwp]
    [app.main.data.workspace.state-helpers :as wsh]
    [app.main.repo :as rp]
    [app.main.store :as st]
@@ -165,6 +165,7 @@
                         :cmd :export-shapes
                         :wait true}]
         (rx/concat
+         ;; FIXME: still not implemented
          (rx/of ::dwp/force-persist)
          (->> (rp/cmd! :export params)
               (rx/mapcat (fn [{:keys [id filename]}]

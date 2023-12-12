@@ -10,9 +10,9 @@
    [app.common.data.macros :as dm]
    [app.main.data.messages :as msg]
    [app.main.data.modal :as modal]
+   [app.main.data.persistence :as dps]
    [app.main.data.workspace :as dw]
    [app.main.data.workspace.colors :as dc]
-   [app.main.data.workspace.persistence :as dwp]
    [app.main.features :as features]
    [app.main.refs :as refs]
    [app.main.store :as st]
@@ -20,7 +20,6 @@
    [app.main.ui.hooks :as hooks]
    [app.main.ui.hooks.resize :refer [use-resize-observer]]
    [app.main.ui.icons :as i]
-   [app.main.data.persistence :as dp]
    [app.main.ui.workspace.colorpalette :refer [colorpalette]]
    [app.main.ui.workspace.colorpicker]
    [app.main.ui.workspace.context-menu :refer [context-menu]]
@@ -184,7 +183,7 @@
         background-color (:background-color wglobal)]
 
     (mf/with-effect []
-      (st/emit! (dp/initialize-persistence)))
+      (st/emit! (dps/initialize-persistence)))
 
     ;; Setting the layout preset by its name
     (mf/with-effect [layout-name]
@@ -197,8 +196,8 @@
     (mf/with-effect [project-id file-id]
       (st/emit! (dw/initialize-file project-id file-id))
       (fn []
-        ;; FIXME
-        (st/emit! ::dwp/force-persist
+        ;; FIXME: not implemented !!!!!
+        (st/emit! ::dps/force-persist
                   (dc/stop-picker)
                   (modal/hide)
                   msg/hide

@@ -15,7 +15,6 @@
    [app.main.data.websocket :as dws]
    [app.main.data.changes :as dch]
    [app.main.data.workspace.libraries :as dwl]
-   [app.main.data.workspace.persistence :as dwp]
    [app.util.globals :refer [global]]
    [app.util.mouse :as mse]
    [app.util.object :as obj]
