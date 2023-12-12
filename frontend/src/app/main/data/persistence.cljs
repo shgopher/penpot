@@ -35,18 +35,23 @@
   (ptk/reify ::update-status
     ptk/UpdateEvent
     (update [_ state]
-      (log/trc :hint "update-status" :status status)
-      (-> state
-          (update :persistence assoc :status status)
-          (cond-> (= status :saved)
-            (update :persistence dissoc :run-id))))))
+      (update state :persistence (fn [pstate]
+                                   ;; (log/trc :hint "update-status" :status status :prev-status (:status pstate))
+                                   (let [status (if (and (= status :pending)
+                                                         (= (:status pstate) :saving))
+                                                  (:status pstate)
+                                                  status)]
+
+                                     (-> (assoc pstate :status status)
+                                         (cond-> (= status :saved)
+                                           (dissoc :run-id)))))))))
 
 (defn- update-file-revn
   [file-id revn]
   (ptk/reify ::update-file-revn
     ptk/UpdateEvent
     (update [_ state]
-      (log/debug :hint "update-file-revn" :file-id file-id :revn revn)
+      (log/debug :hint "update-file-revn" :file-id (dm/str file-id) :revn revn)
       (if-let [current-file-id (:current-file-id state)]
         (if (= file-id current-file-id)
           (update-in state [:workspace-file :revn] max revn)
@@ -79,7 +84,7 @@
     (ptk/reify ::append-commit
       ptk/UpdateEvent
       (update [_ state]
-        (log/trc :hint "append-commit" :method "update" :id (str id))
+        (log/trc :hint "append-commit" :method "update" :commit-id (dm/str id))
         (update state :persistence
                 (fn [pstate]
                    (-> pstate
@@ -99,7 +104,7 @@
   (ptk/reify ::persist-commit
     ptk/WatchEvent
     (watch [_ state stream]
-      (log/dbg :hint "persist-commit" :id (str commit-id))
+      (log/dbg :hint "persist-commit" :commit-id (dm/str commit-id))
       (when-let [{:keys [file-id file-revn changes] :as commit} (dm/get-in state [:persistence :index commit-id])]
         (let [;; this features set does not includes the ffeat/enabled
               ;; because they are already available on the backend and
@@ -120,7 +125,7 @@
           ;; FIXME: handle lagged here !!!!
           (->> (rp/cmd! :update-file params)
                (rx/mapcat (fn [{:keys [revn lagged] :as response}]
-                            (log/debug :hint "changes persisted" :commit-id commit-id :lagged (count lagged))
+                            (log/debug :hint "changes persisted" :commit-id (dm/str commit-id) :lagged (count lagged))
                             (rx/of (ptk/data-event ::commit-persisted commit)
                                    (update-file-revn file-id revn))))
 
@@ -140,7 +145,7 @@
       (let [{:keys [queue index]} (:persistence state)]
         (if-let [commit-id (peek queue)]
           (do
-            (log/dbg :hint "run-persistence-task" :commit-id (str commit-id))
+            (log/dbg :hint "run-persistence-task" :commit-id (dm/str commit-id))
             (->> (rx/merge
                   (rx/of (persist-commit commit-id))
                   (->> stream
