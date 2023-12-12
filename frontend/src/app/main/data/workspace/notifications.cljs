@@ -13,7 +13,7 @@
    [app.common.uuid :as uuid]
    [app.main.data.common :refer [handle-notification]]
    [app.main.data.websocket :as dws]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.changes :as dch]
    [app.main.data.workspace.libraries :as dwl]
    [app.main.data.workspace.persistence :as dwp]
    [app.util.globals :refer [global]]
@@ -198,9 +198,9 @@
 (defn handle-file-change
   [{:keys [file-id changes revn] :as msg}]
 
-  ;; (dm/assert!
-  ;;  "expected valid parameters"
-  ;;  (sm/valid? schema:handle-file-change msg))
+  (dm/assert!
+   "expected valid parameters"
+   (sm/check! schema:handle-file-change msg))
 
   (ptk/reify ::handle-file-change
     IDeref

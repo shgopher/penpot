@@ -9,7 +9,8 @@
    [app.common.data :as d]
    [app.common.files.helpers :as cfh]
    [app.common.text :as txt]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.changes :as dch]
+   [app.main.data.workspace.shapes :as dwsh]
    [app.main.data.workspace.state-helpers :as wsh]
    [app.main.fonts :as fonts]
    [beicon.core :as rx]
@@ -111,7 +112,7 @@
               typographies)]
 
         (rx/concat
-          (rx/of (dch/update-shapes ids #(fix-deleted-font-shape %) {:reg-objects? false
+          (rx/of (dwsh/update-shapes ids #(fix-deleted-font-shape %) {:reg-objects? false
                                                            :save-undo? false
                                                            :ignore-tree true}))
           (if (empty? component-changes)

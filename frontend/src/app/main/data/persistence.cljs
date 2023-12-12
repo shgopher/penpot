@@ -12,8 +12,7 @@
    [app.common.files.changes :as cpc]
    [app.common.types.shape-tree :as ctst]
    [app.common.uuid :as uuid]
-   [app.main.data.workspace.changes :as dch]
-   [app.main.data.workspace.thumbnails :as dwt]
+   [app.main.data.changes :as dch]
    [app.main.features :as features]
    [app.main.repo :as rp]
    [app.main.store :as st]
@@ -61,14 +60,14 @@
   (ptk/reify ::persist-commit
     ptk/WatchEvent
     (watch [_ state stream]
+      (log/dbg :hint "persist-commit" :id (str commit-id))
       (when-let [{:keys [file-id file-revn changes] :as commit} (dm/get-in state [:persistence :index commit-id])]
         (let [;; this features set does not includes the ffeat/enabled
               ;; because they are already available on the backend and
               ;; this request provides a set of features to enable in
               ;; this request.
-              features (cond-> #{}
-                         (features/active-feature? state :components-v2)
-                         (conj "components/v2"))
+
+              features (features/get-team-enabled-features state)
               sid      (:session-id state)
               revn     (max file-revn (get @revn-data file-id 0))
               params   {:id file-id
@@ -80,12 +79,10 @@
                         :changes (vec changes)
                         :features features}]
 
+          ;; FIXME: handle lagged here !!!!
           (->> (rp/cmd! :update-file params)
                (rx/mapcat (fn [{:keys [revn lagged] :as response}]
                             (log/debug :hint "changes persisted" :commit-id commit-id :lagged (count lagged))
-                            ;; (swap! revn-data update file-id (fnil max revn) (:revn response))
-
-                            ;; FIXME: handle lagged here
                             (rx/of (ptk/data-event ::commit-persisted commit)
                                    (update-file-revn file-id revn))))
 
@@ -111,7 +108,7 @@
                      (rx/map deref)
                      (rx/filter #(= commit-id (:id %)))
                      (rx/take 1)
-                     (rx/observe-on :async)
+                     ;; (rx/observe-on :async)
                      (rx/mapcat (fn [_]
                                   (rx/of (discard-commit commit-id)
                                          (run-persistence-task))))))
@@ -170,7 +167,7 @@
 
             notifier-s
             (->> commits-s
-                 (rx/debounce 2000)
+                 (rx/debounce 1000)
                  (rx/tap #(log/trc :hint "persistence beat")))]
 
 
@@ -181,7 +178,9 @@
          (->> commits-s
               (rx/buffer-until notifier-s)
               (rx/mapcat merge-commit)
-              (rx/map append-commit)
+              (rx/mapcat (fn [commit]
+                           (rx/of (append-commit commit)
+                                  (dch/update-indexes commit))))
               (rx/take-until (rx/delay 100 stoper-s))
               (rx/finalize (fn []
                              (log/debug :hint "finalize persistence: changes watcher"))))
@@ -192,6 +191,7 @@
               (rx/filter dch/commit?)
               (rx/map deref)
               (rx/filter #(= :remote (:source %)))
-              (rx/map (fn [{:keys [file-id file-revn]}]
-                            (update-file-revn file-id file-revn)))
+              (rx/mapcat (fn [{:keys [file-id file-revn] :as commit}]
+                           (rx/of (update-file-revn file-id file-revn)
+                                  (dch/update-indexes commit))))
               (rx/take-until stoper-s)))))))

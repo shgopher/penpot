@@ -10,7 +10,7 @@
    [app.common.data :as d]
    [app.common.text :as txt]
    [app.common.uuid :as uuid]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.workspace.shapes :as dwsh]
    [app.main.data.workspace.libraries :as dwl]
    [app.main.data.workspace.shortcuts :as sc]
    [app.main.data.workspace.texts :as dwt]
@@ -99,9 +99,9 @@
          (mf/deps direction)
          (fn [value]
            (let [val (if new-css-system
-                             value
-                             (-> (dom/get-current-target value)
-                                 (dom/get-data "value")))
+                       value
+                       (-> (dom/get-current-target value)
+                           (dom/get-data "value")))
                  dir (if (= val direction)
                        "none"
                        val)]
@@ -115,28 +115,28 @@
                           :name "text-direction-options"}
         [:& radio-button {:value "ltr"
                           :type "checkbox"
-                            :id "ltr-text-direction"
-                            :title (tr "workspace.options.text-options.direction-ltr")
-                            :icon i/text-ltr-refactor}]
+                          :id "ltr-text-direction"
+                          :title (tr "workspace.options.text-options.direction-ltr")
+                          :icon i/text-ltr-refactor}]
         [:& radio-button {:value "rtl"
                           :type "checkbox"
                           :id "rtl-text-direction"
                           :title (tr "workspace.options.text-options.direction-rtl")
                           :icon i/text-rtl-refactor}]]]
-    ;; --- Align
-    [:div.align-icons
-     [:span.tooltip.tooltip-bottom-left
-      {:alt (tr "workspace.options.text-options.direction-ltr")
-       :class (dom/classnames :current (= "ltr" direction))
-       :data-value "ltr"
-       :on-click handle-change}
-      i/text-direction-ltr]
-     [:span.tooltip.tooltip-bottom-left
-      {:alt (tr "workspace.options.text-options.direction-rtl")
-       :class (dom/classnames :current (= "rtl" direction))
-       :data-value "rtl"
-       :on-click handle-change}
-      i/text-direction-rtl]])))
+      ;; --- Align
+      [:div.align-icons
+       [:span.tooltip.tooltip-bottom-left
+        {:alt (tr "workspace.options.text-options.direction-ltr")
+         :class (dom/classnames :current (= "ltr" direction))
+         :data-value "ltr"
+         :on-click handle-change}
+        i/text-direction-ltr]
+       [:span.tooltip.tooltip-bottom-left
+        {:alt (tr "workspace.options.text-options.direction-rtl")
+         :class (dom/classnames :current (= "rtl" direction))
+         :data-value "rtl"
+         :on-click handle-change}
+        i/text-direction-rtl]])))
 
 (mf/defc vertical-align
   [{:keys [values on-change on-blur] :as props}]
@@ -207,8 +207,8 @@
                                  (keyword)))]
              (st/emit!
               (dwu/start-undo-transaction uid)
-              (dch/update-shapes ids #(assoc % :grow-type grow-type)))
-            ;; We asynchronously commit so every sychronous event is resolved first and inside the transaction
+              (dwsh/update-shapes ids #(assoc % :grow-type grow-type)))
+             ;; We asynchronously commit so every sychronous event is resolved first and inside the transaction
              (ts/schedule #(st/emit! (dwu/commit-undo-transaction uid))))
            (when (some? on-blur) (on-blur))))]
 

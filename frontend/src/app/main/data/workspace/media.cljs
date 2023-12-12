@@ -21,7 +21,7 @@
    [app.config :as cf]
    [app.main.data.media :as dmm]
    [app.main.data.messages :as msg]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.changes :as dch]
    [app.main.data.workspace.libraries :as dwl]
    [app.main.data.workspace.shapes :as dwsh]
    [app.main.data.workspace.state-helpers :as wsh]

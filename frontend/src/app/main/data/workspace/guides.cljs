@@ -11,7 +11,7 @@
    [app.common.geom.point :as gpt]
    [app.common.geom.shapes :as gsh]
    [app.common.types.page :as ctp]
-   [app.main.data.workspace.changes :as dwc]
+   [app.main.data.changes :as dwc]
    [app.main.data.workspace.state-helpers :as wsh]
    [beicon.core :as rx]
    [potok.core :as ptk]))

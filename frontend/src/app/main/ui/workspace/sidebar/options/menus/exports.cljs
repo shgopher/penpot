@@ -9,7 +9,7 @@
   (:require
    [app.common.data :as d]
    [app.main.data.exports :as de]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.workspace.shapes :as dwsh]
    [app.main.data.workspace.state-helpers :as wsh]
    [app.main.refs :as refs]
    [app.main.store :as st]
@@ -99,7 +99,7 @@
          (mf/deps ids)
          (fn []
            (let [xspec {:type :png :suffix "" :scale 1}]
-             (st/emit! (dch/update-shapes ids
+             (st/emit! (dwsh/update-shapes ids
                                           (fn [shape]
                                             (assoc shape :exports (into [xspec] (:exports shape)))))))))
 
@@ -112,7 +112,7 @@
                                                               (mapv second)))
 
                  remove (fn [shape] (update shape :exports remove-fill-by-index position))]
-             (st/emit! (dch/update-shapes ids remove)))))
+             (st/emit! (dwsh/update-shapes ids remove)))))
 
         on-scale-change
         (mf/use-fn
@@ -123,7 +123,7 @@
                          (-> event
                              (dom/get-target-val)
                              (d/parse-double)))]
-             (st/emit! (dch/update-shapes ids
+             (st/emit! (dwsh/update-shapes ids
                                           (fn [shape]
                                             (assoc-in shape [:exports index :scale] scale)))))))
 
@@ -135,7 +135,7 @@
                  index   (-> (dom/get-current-target event)
                              (dom/get-data "value")
                              (int))]
-             (st/emit! (dch/update-shapes ids
+             (st/emit! (dwsh/update-shapes ids
                                           (fn [shape]
                                             (assoc-in shape [:exports index :suffix] value)))))))
 
@@ -148,7 +148,7 @@
                          (-> event
                              (dom/get-target-val)
                              (keyword)))]
-             (st/emit! (dch/update-shapes ids
+             (st/emit! (dwsh/update-shapes ids
                                           (fn [shape]
                                             (assoc-in shape [:exports index :type] type)))))))
 
@@ -156,7 +156,7 @@
         (mf/use-fn
          (mf/deps ids)
          (fn []
-           (st/emit! (dch/update-shapes ids
+           (st/emit! (dwsh/update-shapes ids
                                         (fn [shape]
                                           (assoc shape :exports []))))))
         manage-key-down

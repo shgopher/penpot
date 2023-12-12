@@ -9,7 +9,7 @@
    [app.common.data.macros :as dm]
    [app.common.logging :as log]
    [app.common.types.shape.layout :as ctl]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.changes :as dch]
    [app.main.data.workspace.state-helpers :as wsh]
    [app.main.data.workspace.undo :as dwu]
    [app.util.router :as rt]

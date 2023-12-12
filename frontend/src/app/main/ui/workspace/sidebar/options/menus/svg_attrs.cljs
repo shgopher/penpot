@@ -8,7 +8,7 @@
   (:require-macros [app.main.style :as stl])
   (:require
    [app.common.data :as d]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.workspace.shapes :as dwsh]
    [app.main.store :as st]
    [app.main.ui.components.title-bar :refer [title-bar]]
    [app.main.ui.context :as ctx]
@@ -96,7 +96,7 @@
          (fn [attr value]
            (let [update-fn
                  (fn [shape] (assoc-in shape (concat [:svg-attrs] attr) value))]
-             (st/emit! (dch/update-shapes ids update-fn)))))
+             (st/emit! (dwsh/update-shapes ids update-fn)))))
 
         handle-delete
         (mf/use-fn
@@ -111,7 +111,7 @@
                                  (empty? (get-in shape [:svg-attrs :style]))
                                  (update :svg-attrs dissoc :style))]
                      shape))]
-             (st/emit! (dch/update-shapes ids update-fn)))))]
+             (st/emit! (dwsh/update-shapes ids update-fn)))))]
 
     (when-not (empty? attrs)
       (if new-css-system

@@ -13,7 +13,7 @@
    [app.common.types.shape.radius :as ctsr]
    [app.main.constants :refer [size-presets]]
    [app.main.data.workspace :as udw]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.workspace.shapes :as dwsh]
    [app.main.data.workspace.interactions :as dwi]
    [app.main.data.workspace.undo :as dwu]
    [app.main.refs :as refs]
@@ -252,13 +252,13 @@
         (mf/use-fn
          (mf/deps ids-with-children)
          (fn [update-fn]
-           (dch/update-shapes ids-with-children
-                              (fn [shape]
-                                (if (ctsr/has-radius? shape)
-                                  (update-fn shape)
-                                  shape))
-                              {:reg-objects? true
-                               :attrs [:rx :ry :r1 :r2 :r3 :r4]})))
+           (dwsh/update-shapes ids-with-children
+                               (fn [shape]
+                                 (if (ctsr/has-radius? shape)
+                                   (update-fn shape)
+                                   shape))
+                               {:reg-objects? true
+                                :attrs [:rx :ry :r1 :r2 :r3 :r4]})))
 
         on-switch-to-radius-1
         (mf/use-fn
@@ -320,7 +320,7 @@
          (mf/deps ids)
          (fn [event]
            (let [value (-> event dom/get-target dom/checked?)]
-             (st/emit! (dch/update-shapes ids (fn [shape] (assoc shape :show-content (not value))))))))
+             (st/emit! (dwsh/update-shapes ids (fn [shape] (assoc shape :show-content (not value))))))))
 
         on-change-show-in-viewer
         (mf/use-fn
@@ -330,7 +330,7 @@
                  undo-id (js/Symbol)]
              (do
                (st/emit! (dwu/start-undo-transaction undo-id)
-                         (dch/update-shapes ids (fn [shape] (assoc shape :hide-in-viewer (not value)))))
+                         (dwsh/update-shapes ids (fn [shape] (assoc shape :hide-in-viewer (not value)))))
 
                (when-not value
                  ;; when a frame is no longer shown in view mode, cannot have
@@ -372,16 +372,16 @@
                  (let [preset-match (and (= (:width size-preset) (d/parse-integer (:width values) 0))
                                          (= (:height size-preset) (d/parse-integer (:height values) 0)))]
                    [:li {:key (:name size-preset)
-                       :class (stl/css-case :dropdown-element true
-                                            :match preset-match)
-                       :data-width (:width size-preset)
-                       :data-height (:height size-preset)
-                       :on-click on-preset-selected}
-                  [:div {:class (stl/css :name-wrapper)}
-                   [:span {:class (stl/css :preset-name)} (:name size-preset)]
-                   [:span {:class (stl/css :preset-size)} (:width size-preset) " x " (:height size-preset)]]
-                  (when preset-match
-                    [:span {:class (stl/css :check-icon)} i/tick-refactor])])))]]]
+                         :class (stl/css-case :dropdown-element true
+                                              :match preset-match)
+                         :data-width (:width size-preset)
+                         :data-height (:height size-preset)
+                         :on-click on-preset-selected}
+                    [:div {:class (stl/css :name-wrapper)}
+                     [:span {:class (stl/css :preset-name)} (:name size-preset)]
+                     [:span {:class (stl/css :preset-size)} (:width size-preset) " x " (:height size-preset)]]
+                    (when preset-match
+                      [:span {:class (stl/css :check-icon)} i/tick-refactor])])))]]]
 
           [:& radio-buttons {:selected (or (d/name orientation) "")
                              :on-change on-orientation-change-refactor
@@ -534,8 +534,8 @@
              [:button {:class (stl/css-case :radius-mode true
                                             :selected (= radius-mode :radius-4))
                        :title (if(= radius-mode :radius-4)
-                               (tr "workspace.options.radius.all-corners")
-                               (tr "workspace.options.radius.single-corners"))
+                                (tr "workspace.options.radius.all-corners")
+                                (tr "workspace.options.radius.single-corners"))
                        :on-click toggle-radius-mode}
               i/corner-radius-refactor]])])
        (when (or (options :clip-content) (options :show-in-viewer))
@@ -602,7 +602,7 @@
             [:span.orientation-icon {:data-value :horiz
                                      :on-click on-orientation-clicked} i/size-horiz]])
 
-             ;; WIDTH & HEIGHT
+         ;; WIDTH & HEIGHT
          (when (options :size)
            [:div.row-flex
             [:span.element-set-subtitle (tr "workspace.options.size")]
@@ -630,7 +630,7 @@
                i/lock
                i/unlock)]])
 
-             ;; POSITION
+         ;; POSITION
          (when (options :position)
            [:div.row-flex
             [:span.element-set-subtitle (tr "workspace.options.position")]
@@ -647,7 +647,7 @@
                                  :on-change on-pos-y-change
                                  :value (:y values)}]]])
 
-             ;; ROTATION
+         ;; ROTATION
          (when (options :rotation)
            [:div.row-flex
             [:span.element-set-subtitle (tr "workspace.options.rotation")]
@@ -661,7 +661,7 @@
                :on-change on-rotation-change
                :value (:rotation values)}]]])
 
-             ;; RADIUS
+         ;; RADIUS
          (when (options :radius)
            [:div.row-flex
             [:div.radius-options

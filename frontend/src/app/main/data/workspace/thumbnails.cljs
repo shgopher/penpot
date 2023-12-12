@@ -11,7 +11,7 @@
    [app.common.logging :as l]
    [app.common.thumbnails :as thc]
    [app.common.uuid :as uuid]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.changes :as dch]
    [app.main.data.workspace.notifications :as-alias wnt]
    [app.main.data.workspace.state-helpers :as wsh]
    [app.main.rasterizer :as thr]

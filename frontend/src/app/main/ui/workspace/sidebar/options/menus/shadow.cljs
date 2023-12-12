@@ -12,7 +12,7 @@
    [app.common.data.macros :as dm]
    [app.common.math :as mth]
    [app.common.uuid :as uuid]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.workspace.shapes :as dwsh]
    [app.main.data.workspace.colors :as dc]
    [app.main.data.workspace.undo :as dwu]
    [app.main.store :as st]
@@ -77,7 +77,7 @@
         (mf/use-fn
          (mf/deps ids index)
          (fn []
-           (st/emit! (dch/update-shapes ids #(update % :shadow remove-shadow-by-index index)))))
+           (st/emit! (dwsh/update-shapes ids #(update % :shadow remove-shadow-by-index index)))))
 
         on-drop
         (mf/use-fn
@@ -106,7 +106,7 @@
           ([index attr update-ref]
            (fn [value]
              (when (mth/finite? value)
-               (st/emit! (dch/update-shapes ids #(assoc-in % [:shadow index attr] value)))
+               (st/emit! (dwsh/update-shapes ids #(assoc-in % [:shadow index attr] value)))
                (when-let [update-node (and update-ref (mf/ref-val update-ref))]
                  (dom/set-value! update-node value))))))
 
@@ -114,7 +114,7 @@
         (mf/use-fn
          (mf/deps ids index)
          (fn [color]
-           (st/emit! (dch/update-shapes
+           (st/emit! (dwsh/update-shapes
                       ids
                       #(assoc-in % [:shadow index :color]
                          (dissoc color :id :file-id))))))
@@ -124,7 +124,7 @@
          (mf/deps ids index)
          (fn [_color _opacity]
            (when-not (string? (:color value))
-             (st/emit! (dch/update-shapes
+             (st/emit! (dwsh/update-shapes
                         ids
                         #(assoc-in % [:shadow index :color]
                                    (dissoc (:color value) :id :file-id)))))))
@@ -133,7 +133,7 @@
         (mf/use-fn
          (mf/deps ids index)
          (fn []
-           (st/emit! (dch/update-shapes ids #(update-in % [:shadow index :hidden] not)))))
+           (st/emit! (dwsh/update-shapes ids #(update-in % [:shadow index :hidden] not)))))
 
         on-toggle-open-shadow
         (fn []
@@ -146,7 +146,7 @@
            (let [value (if new-css-system
                          (keyword event)
                          (-> event dom/get-target-val d/read-string))]
-             (st/emit! (dch/update-shapes ids #(assoc-in % [:shadow index :style] value))))))
+             (st/emit! (dwsh/update-shapes ids #(assoc-in % [:shadow index :style] value))))))
 
         type-options [{:value "drop-shadow" :label (tr "workspace.options.shadow-options.drop-shadow")}
                       {:value "inner-shadow" :label (tr "workspace.options.shadow-options.inner-shadow")}]
@@ -372,7 +372,7 @@
         (mf/use-fn
          (mf/deps ids)
          (fn []
-           (st/emit! (dch/update-shapes ids #(dissoc % :shadow)))))
+           (st/emit! (dwsh/update-shapes ids #(dissoc % :shadow)))))
 
         handle-reorder
         (mf/use-fn

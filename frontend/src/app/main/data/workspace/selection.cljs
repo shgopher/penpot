@@ -25,7 +25,7 @@
    [app.common.types.shape.layout :as ctl]
    [app.common.uuid :as uuid]
    [app.main.data.modal :as md]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.changes :as dch]
    [app.main.data.workspace.collapse :as dwc]
    [app.main.data.workspace.libraries-helpers :as dwlh]
    [app.main.data.workspace.specialized-panel :as-alias dwsp]

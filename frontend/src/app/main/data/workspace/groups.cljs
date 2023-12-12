@@ -15,7 +15,7 @@
    [app.common.types.container :as ctn]
    [app.common.types.shape :as cts]
    [app.common.types.shape.layout :as ctl]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.changes :as dch]
    [app.main.data.workspace.selection :as dws]
    [app.main.data.workspace.state-helpers :as wsh]
    [app.main.data.workspace.undo :as dwu]

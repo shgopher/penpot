@@ -39,7 +39,7 @@
    [app.main.data.persistence :as dp]
    [app.main.data.users :as du]
    [app.main.data.workspace.bool :as dwb]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.changes :as dch]
    [app.main.data.workspace.collapse :as dwco]
    [app.main.data.workspace.drawing :as dwd]
    [app.main.data.workspace.drawing.common :as dwdc]
@@ -65,6 +65,7 @@
    [app.main.data.workspace.state-helpers :as wsh]
    [app.main.data.workspace.thumbnails :as dwth]
    [app.main.data.workspace.transforms :as dwt]
+   [app.main.data.workspace.undo :as dwu]
    [app.main.data.workspace.undo :as dwu]
    [app.main.data.workspace.viewport :as dwv]
    [app.main.data.workspace.zoom :as dwz]
@@ -346,11 +347,16 @@
               (dcm/retrieve-comment-threads file-id)
               (fetch-bundle project-id file-id))
 
-       ;; FIXME: add buffering (?)
        (->> stream
             (rx/filter dch/commit?)
             (rx/map deref)
-            (rx/map dch/update-indexes)
+            (rx/mapcat (fn [{:keys [save-undo? undo-changes redo-changes undo-group tags stack-undo?]}]
+                         (if (and save-undo? (seq undo-changes))
+                           (let [entry {:undo-changes undo-changes
+                                        :redo-changes redo-changes
+                                        :undo-group undo-group
+                                        :tags tags}]
+                             (rx/of (dwu/append-undo entry stack-undo?))))))
             (rx/take-until
              (rx/filter (ptk/type? ::finalize-file) stream)))))
 
@@ -693,7 +699,7 @@
   (ptk/reify ::update-shape
     ptk/WatchEvent
     (watch [_ _ _]
-      (rx/of (dch/update-shapes [id] #(merge % attrs))))))
+      (rx/of (dwsh/update-shapes [id] #(merge % attrs))))))
 
 (defn start-rename-shape
   "Start shape renaming process"
@@ -1175,7 +1181,7 @@
                   (assoc shape :proportion-lock false)
                   (-> (assoc shape :proportion-lock true)
                       (gpp/assign-proportions))))]
-        (rx/of (dch/update-shapes [id] assign-proportions))))))
+        (rx/of (dwsh/update-shapes [id] assign-proportions))))))
 
 (defn toggle-proportion-lock
   []
@@ -1189,8 +1195,8 @@
             multi         (attrs/get-attrs-multi selected-obj [:proportion-lock])
             multi?        (= :multiple (:proportion-lock multi))]
         (if multi?
-          (rx/of (dch/update-shapes selected #(assoc % :proportion-lock true)))
-          (rx/of (dch/update-shapes selected #(update % :proportion-lock not))))))))
+          (rx/of (dwsh/update-shapes selected #(assoc % :proportion-lock true)))
+          (rx/of (dwsh/update-shapes selected #(update % :proportion-lock not))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Navigation

@@ -10,7 +10,7 @@
    [app.common.files.helpers :as cph]
    [app.common.svg.path.shapes-to-path :as upsp]
    [app.common.types.container :as ctn]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.changes :as dch]
    [app.main.data.workspace.state-helpers :as wsh]
    [beicon.core :as rx]
    [potok.core :as ptk]))

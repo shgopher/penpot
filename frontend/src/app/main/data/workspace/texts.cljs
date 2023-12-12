@@ -17,7 +17,7 @@
    [app.common.types.modifiers :as ctm]
    [app.common.uuid :as uuid]
    [app.main.data.events :as ev]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.changes :as dch]
    [app.main.data.workspace.common :as dwc]
    [app.main.data.workspace.libraries :as dwl]
    [app.main.data.workspace.modifiers :as dwm]
@@ -145,7 +145,7 @@
                           (some? (:current-page-id state))
                           (some? shape))
                  (rx/of
-                  (dch/update-shapes
+                  (dwsh/update-shapes
                    [id]
                    (fn [shape]
                      (let [{:keys [width height position-data]} modifiers]
@@ -280,7 +280,7 @@
             shape-ids (cond (cfh/text-shape? shape)  [id]
                             (cfh/group-shape? shape) (cfh/get-children-ids objects id))]
 
-        (rx/of (dch/update-shapes shape-ids update-fn))))))
+        (rx/of (dwsh/update-shapes shape-ids update-fn))))))
 
 (defn update-paragraph-attrs
   [{:keys [id attrs]}]
@@ -307,7 +307,7 @@
                             (cfh/text-shape? shape)  [id]
                             (cfh/group-shape? shape) (cfh/get-children-ids objects id))]
 
-            (rx/of (dch/update-shapes shape-ids update-fn))))))))
+            (rx/of (dwsh/update-shapes shape-ids update-fn))))))))
 
 (defn update-text-attrs
   [{:keys [id attrs]}]
@@ -327,7 +327,7 @@
               shape-ids (cond
                           (cfh/text-shape? shape)  [id]
                           (cfh/group-shape? shape) (cfh/get-children-ids objects id))]
-          (rx/of (dch/update-shapes shape-ids #(update-text-content % update-node? d/txt-merge attrs))))))))
+          (rx/of (dwsh/update-shapes shape-ids #(update-text-content % update-node? d/txt-merge attrs))))))))
 
 
 (defn migrate-node
@@ -376,7 +376,7 @@
               (fn [shape]
                 (d/update-when shape :content update-content))]
 
-          (rx/of (dch/update-shapes shape-ids update-shape)))))))
+          (rx/of (dwsh/update-shapes shape-ids update-shape)))))))
 
 ;; --- RESIZE UTILS
 
@@ -429,7 +429,7 @@
 
           (let [ids (into #{} (filter changed-text?) (keys props))]
             (rx/of (dwu/start-undo-transaction undo-id)
-                   (dch/update-shapes ids update-fn {:reg-objects? true
+                   (dwsh/update-shapes ids update-fn {:reg-objects? true
                                                      :stack-undo? true
                                                      :ignore-remote? true
                                                      :ignore-touched true})
@@ -571,7 +571,7 @@
     (watch [_ state _]
       (let [position-data (::update-position-data state)]
         (rx/concat
-         (rx/of (dch/update-shapes
+         (rx/of (dwsh/update-shapes
                  (keys position-data)
                  (fn [shape]
                    (-> shape

@@ -11,7 +11,7 @@
    [app.common.geom.rect :as grc]
    [app.common.geom.shapes :as gsh]
    [app.common.uuid :as uuid]
-   [app.main.data.workspace.changes :as dch]
+   [app.main.data.workspace.shapes :as dwsh]
    [app.main.refs :as refs]
    [app.main.store :as st]
    [app.main.ui.components.select :refer [select]]
@@ -105,7 +105,7 @@
                                [:constraints-h :center])
                    nil ())]
 
-             (st/emit! (dch/update-shapes
+             (st/emit! (dwsh/update-shapes
                         ids
                         #(assoc % constraint new-value))))))
 
@@ -118,7 +118,7 @@
                                  (keyword))
                  value (-> (dom/get-target-val event) (keyword))]
              (when-not (str/empty? value)
-               (st/emit! (dch/update-shapes
+               (st/emit! (dwsh/update-shapes
                           ids
                           #(assoc % constraint value)))))))
 
@@ -127,7 +127,7 @@
          (mf/deps ids)
          (fn [value]
            (when-not (str/empty? value)
-             (st/emit! (dch/update-shapes
+             (st/emit! (dwsh/update-shapes
                         ids
                         #(assoc % :constraints-h (keyword value)))))))
 
@@ -136,7 +136,7 @@
          (mf/deps ids)
          (fn [value]
            (when-not (str/empty? value)
-             (st/emit! (dch/update-shapes
+             (st/emit! (dwsh/update-shapes
                         ids
                         #(assoc % :constraints-v (keyword value)))))))
 
@@ -144,7 +144,7 @@
         (mf/use-fn
          (mf/deps ids)
          (fn [_]
-           (st/emit! (dch/update-shapes ids #(update % :fixed-scroll not)))))
+           (st/emit! (dwsh/update-shapes ids #(update % :fixed-scroll not)))))
 
         options-h
         (mf/with-memo [constraints-h]
