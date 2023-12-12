@@ -36,7 +36,7 @@
    [app.main.data.events :as ev]
    [app.main.data.fonts :as df]
    [app.main.data.messages :as msg]
-   [app.main.data.persistence :as dp]
+   [app.main.data.persistence :as dps]
    [app.main.data.users :as du]
    [app.main.data.workspace.bool :as dwb]
    [app.main.data.changes :as dch]
@@ -339,27 +339,32 @@
     ptk/WatchEvent
     (watch [_ _ stream]
       (log/debug :hint "initialize-file" :file-id file-id)
+      (let [stoper-s (rx/filter (ptk/type? ::finalize-file) stream)]
+        (rx/merge
+         (rx/of msg/hide
+                (features/initialize)
+                (dcm/retrieve-comment-threads file-id)
+                (fetch-bundle project-id file-id))
 
-      (rx/merge
-       (rx/of msg/hide
-              (features/initialize)
-              (dcm/retrieve-comment-threads file-id)
-              (fetch-bundle project-id file-id))
+         ;; (->> stream
+         ;;      (rx/filter (ptk/type? ::bundle-fetched))
+         ;;      (rx/take 1)
+         ;;      (rx/observe-on :async)
+         ;;      (rx/map dps/apply-pending-changes))
 
-       (->> stream
-            (rx/filter dch/commit?)
-            (rx/map deref)
-            (rx/mapcat (fn [{:keys [save-undo? undo-changes redo-changes undo-group tags stack-undo?]}]
-                         (if (and save-undo? (seq undo-changes))
-                           (let [entry {:undo-changes undo-changes
-                                        :redo-changes redo-changes
-                                        :undo-group undo-group
-                                        :tags tags}]
-                             (rx/of (dwu/append-undo entry stack-undo?)))
-                           (rx/empty))))
+         (->> stream
+              (rx/filter dch/commit?)
+              (rx/map deref)
+              (rx/mapcat (fn [{:keys [save-undo? undo-changes redo-changes undo-group tags stack-undo?]}]
+                           (if (and save-undo? (seq undo-changes))
+                             (let [entry {:undo-changes undo-changes
+                                          :redo-changes redo-changes
+                                          :undo-group undo-group
+                                          :tags tags}]
+                               (rx/of (dwu/append-undo entry stack-undo?)))
+                             (rx/empty))))
 
-            (rx/take-until
-             (rx/filter (ptk/type? ::finalize-file) stream)))))
+              (rx/take-until stoper-s)))))
 
     ptk/EffectEvent
     (effect [_ _ _]
@@ -1458,7 +1463,7 @@
                        (assoc :section section)
                        (some? frame-id)
                        (assoc :frame-id frame-id))]
-         (rx/of ::dp/force-persist
+         (rx/of ::dps/force-persist
                 (rt/nav-new-window* {:rname :viewer
                                      :path-params pparams
                                      :query-params qparams
@@ -1471,7 +1476,7 @@
      ptk/WatchEvent
      (watch [_ state _]
        (when-let [team-id (or team-id (:current-team-id state))]
-         (rx/of ::dp/force-persist
+         (rx/of ::dps/force-persist
                 (rt/nav :dashboard-projects {:team-id team-id})))))))
 
 (defn go-to-dashboard-fonts
@@ -1480,7 +1485,7 @@
     ptk/WatchEvent
     (watch [_ state _]
       (let [team-id (:current-team-id state)]
-        (rx/of ::dp/force-persist
+        (rx/of ::dps/force-persist
                (rt/nav :dashboard-fonts {:team-id team-id}))))))
 
 

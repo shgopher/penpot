@@ -6,6 +6,7 @@
 
 (ns app.main.data.persistence
   (:require
+   [app.common.pprint :as pp]
    [app.common.data :as d]
    [app.common.data.macros :as dm]
    [app.common.logging :as log]
@@ -172,13 +173,31 @@
   (->> (rx/from (group-by :file-id buffer))
        (rx/map (fn [[file-id [item :as commits]]]
                  (let [uchg (into [] (mapcat :undo-changes) buffer)
-                       rchg (into [] (mapcat :changes) buffer)]
-                   {:id (:id item)
-                    :undo-changes uchg
-                    :changes rchg
-                    :file-id file-id
-                    :origin (:origin item)
-                    :created-at (:created-at item)})))))
+                       rchg (into [] (mapcat :redo-changes) buffer)]
+                   (-> item
+                       (assoc :undo-changes uchg)
+                       (assoc :redo-changes rchg)
+                       (assoc :changes rchg)))))))
+
+
+(defn apply-pending-changes
+  []
+  (prn "apply-pending-changes")
+  (ptk/reify ::apply-pending-changes
+    ptk/WatchEvent
+    (watch [_ state stream]
+      (let [{:keys [status index queue]} (get state :persistence)]
+        (when (= :error status)
+          (prn "apply-pending-changes" (count queue))
+          (->> (rx/from (seq queue))
+               (rx/map (d/getf index))
+               (rx/map (fn [{:keys [id] :as commit}]
+                         (let [commit (-> commit
+                                          (dissoc :id)
+                                          (assoc :commit-id id)
+                                          (assoc :source :pending))]
+                           (log/dbg :hint "replaying commit" :commit-id (dm/str id))
+                           (dch/commit commit))))))))))
 
 (defn initialize-persistence
   []

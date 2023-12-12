@@ -34,7 +34,6 @@
 (def commit?
   (ptk/type? ::commit))
 
-
 (defn update-indexes
   "Given a commit, send the changes to the worker for updating the
   indexes."
