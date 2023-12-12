@@ -30,19 +30,22 @@
 (def revn-data (atom {}))
 (def queue-conj (fnil conj #queue []))
 
+
 (defn- update-status
   [status]
   (ptk/reify ::update-status
     ptk/UpdateEvent
     (update [_ state]
       (update state :persistence (fn [pstate]
-                                   ;; (log/trc :hint "update-status" :status status :prev-status (:status pstate))
+                                   (log/trc :hint "update-status" :status status :prev-status (:status pstate))
                                    (let [status (if (and (= status :pending)
                                                          (= (:status pstate) :saving))
                                                   (:status pstate)
                                                   status)]
 
                                      (-> (assoc pstate :status status)
+                                         (cond-> (= status :error)
+                                           (dissoc :run-id))
                                          (cond-> (= status :saved)
                                            (dissoc :run-id)))))))))
 
@@ -74,7 +77,6 @@
                                                           (pop queue)
                                                           (throw (ex-info "invalid state" {})))))
                                        (update :index dissoc commit-id)))))))
-
 
 (defn- append-commit
   "Event used internally to append the current change to the
@@ -133,7 +135,9 @@
                            (rx/concat
                             (if (= :authentication (:type cause))
                               (rx/empty)
-                              (rx/of (rt/assign-exception cause)))
+                              (rx/of (rt/assign-exception cause)
+                                     (ptk/data-event ::error cause)
+                                     (update-status :error)))
                             (rx/throw cause))))))))))
 
 
@@ -144,7 +148,10 @@
     (watch [_ state stream]
       (let [{:keys [queue index]} (:persistence state)]
         (if-let [commit-id (peek queue)]
-          (do
+          (let [stoper-s (rx/merge
+                          (rx/filter (ptk/type? ::run-persistence-task) stream)
+                          (rx/filter (ptk/type? ::error) stream))]
+
             (log/dbg :hint "run-persistence-task" :commit-id (dm/str commit-id))
             (->> (rx/merge
                   (rx/of (persist-commit commit-id))
@@ -157,9 +164,7 @@
                        (rx/mapcat (fn [_]
                                     (rx/of (discard-commit commit-id)
                                            (run-persistence-task))))))
-                 (rx/take-until
-                  (rx/filter (ptk/type? ::run-persistence-task) stream))))
-
+                 (rx/take-until stoper-s)))
           (rx/of (update-status :saved)))))))
 
 (defn- merge-commit

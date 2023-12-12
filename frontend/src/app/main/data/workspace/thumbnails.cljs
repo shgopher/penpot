@@ -24,6 +24,7 @@
    [app.util.time :as tp]
    [app.util.timers :as tm]
    [app.util.webapi :as wapi]
+   [cuerdas.core :as str]
    [beicon.core :as rx]
    [potok.core :as ptk]))
 
@@ -91,24 +92,34 @@
 
 (defn clear-thumbnail
   ([file-id page-id frame-id tag]
-   (clear-thumbnail (thc/fmt-object-id file-id page-id frame-id tag)))
-  ([object-id]
-   (let [emit-rpc? (volatile! false)]
+   (clear-thumbnail file-id (thc/fmt-object-id file-id page-id frame-id tag)))
+  ([file-id object-id]
+   (let [pending (volatile! false)]
      (ptk/reify ::clear-thumbnail
        cljs.core/IDeref
        (-deref [_] object-id)
 
        ptk/UpdateEvent
        (update [_ state]
-         (let [uri (dm/get-in state [:workspace-thumbnails object-id])]
-           (if (some? uri)
-             (do
-               (l/dbg :hint "clear thumbnail" :object-id object-id)
-               (vreset! emit-rpc? true)
-               (tm/schedule-on-idle (partial wapi/revoke-uri uri))
-               (update state :workspace-thumbnails dissoc object-id))
+         (update state :workspace-thumbnails
+                 (fn [thumbs]
+                   (if-let [uri (get thumbs object-id)]
+                     (do (vreset! pending uri)
+                         (dissoc thumbs object-id))
+                     thumbs))))
 
-             state)))))))
+       ptk/WatchEvent
+       (watch [_ _ _]
+         (if-let [uri @pending]
+           (if (str/starts-with? uri "blob:")
+             (do (tm/schedule-on-idle (partial wapi/revoke-uri uri))
+                 (rx/empty))
+             (let [params {:file-id file-id
+                           :object-id object-id}]
+               (->> (rp/cmd! :delete-file-object-thumbnail params)
+                    (rx/catch rx/empty)
+                    (rx/ignore))))
+           (rx/empty)))))))
 
 (defn- assoc-thumbnail
   [object-id uri]
@@ -181,7 +192,7 @@
 (defn- extract-frame-changes
   "Process a changes set in a commit to extract the frames that are changing"
   [page-id [event [old-data new-data]]]
-  (let [changes (-> event deref :changes)
+  (let [changes (:changes event)
 
         extract-ids
         (fn [{:keys [page-id type] :as change}]
@@ -244,6 +255,8 @@
                   ;; LOCAL CHANGES
                   (->> stream
                        (rx/filter dch/commit?)
+                       (rx/map deref)
+                       (rx/filter #(= :local (:source %)))
                        (rx/observe-on :async)
                        (rx/with-latest-from workspace-data-s)
                        (rx/flat-map (partial extract-frame-changes page-id))
@@ -252,12 +265,13 @@
                   ;; NOTIFICATIONS CHANGES
                   (->> stream
                        (rx/filter (ptk/type? ::wnt/handle-file-change))
+                       (rx/map deref)
                        (rx/observe-on :async)
                        (rx/with-latest-from workspace-data-s)
                        (rx/flat-map (partial extract-frame-changes page-id))
                        (rx/tap #(l/trc :hint "inconming change" :origin "notifications" :frame-id (dm/str %))))
 
-                  ;; PERSISTENCE CHANGES
+                  ;; PERSISTENCE CHANGES ;; FIXME!!! right now is not implemented
                   (->> stream
                        (rx/filter (ptk/type? ::update))
                        (rx/map deref)
@@ -272,7 +286,7 @@
             ;; BUFFER NOTIFIER (window of 5s of inactivity)
             notifier-s
             (->> changes-s
-                 (rx/debounce 1000)
+                 (rx/debounce 5000)
                  (rx/tap #(l/trc :hint "buffer initialized")))]
 
         (->> (rx/merge
