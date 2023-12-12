@@ -22,22 +22,24 @@
    [okulary.core :as l]
    [potok.core :as ptk]))
 
+(declare ^:private run-persistence-task)
+
 (log/set-level! :trace)
 
 (def running (atom false))
 (def revn-data (atom {}))
 (def queue-conj (fnil conj #queue []))
 
-(defn- discard-commit
-  [commit-id]
-  (ptk/reify ::discard-commit
+(defn- update-status
+  [status]
+  (ptk/reify ::update-status
     ptk/UpdateEvent
     (update [_ state]
-      (update-in state [:persistence :queue]
-                 (fn [queue]
-                   (if (= commit-id (peek queue))
-                     (pop queue)
-                     (throw (ex-info "invalid state" {}))))))))
+      (log/trc :hint "update-status" :status status)
+      (-> state
+          (update :persistence assoc :status status)
+          (cond-> (= status :saved)
+            (update :persistence dissoc :run-id))))))
 
 (defn- update-file-revn
   [file-id revn]
@@ -55,7 +57,44 @@
     (effect [_ _ _]
       (swap! revn-data update file-id (fnil max 0) revn))))
 
-(defn persist-commit
+(defn- discard-commit
+  [commit-id]
+  (ptk/reify ::discard-commit
+    ptk/UpdateEvent
+    (update [_ state]
+      (update state :persistence (fn [pstate]
+                                   (-> pstate
+                                       (update :queue (fn [queue]
+                                                        (if (= commit-id (peek queue))
+                                                          (pop queue)
+                                                          (throw (ex-info "invalid state" {})))))
+                                       (update :index dissoc commit-id)))))))
+
+
+(defn- append-commit
+  "Event used internally to append the current change to the
+  persistence queue."
+  [{:keys [id] :as commit}]
+  (let [run-id (uuid/next)]
+    (ptk/reify ::append-commit
+      ptk/UpdateEvent
+      (update [_ state]
+        (log/trc :hint "append-commit" :method "update" :id (str id))
+        (update state :persistence
+                (fn [pstate]
+                   (-> pstate
+                       (update :run-id #(d/nilv % run-id))
+                       (update :queue queue-conj id)
+                       (update :index assoc id commit)))))
+
+      ptk/WatchEvent
+      (watch [_ state stream]
+        (let [pstate (:persistence state)]
+          (when (= run-id (:run-id pstate))
+            (rx/of (run-persistence-task)
+                   (update-status :saving))))))))
+
+(defn- persist-commit
   [commit-id]
   (ptk/reify ::persist-commit
     ptk/WatchEvent
@@ -66,7 +105,6 @@
               ;; because they are already available on the backend and
               ;; this request provides a set of features to enable in
               ;; this request.
-
               features (features/get-team-enabled-features state)
               sid      (:session-id state)
               revn     (max file-revn (get @revn-data file-id 0))
@@ -101,42 +139,25 @@
     (watch [_ state stream]
       (let [{:keys [queue index]} (:persistence state)]
         (if-let [commit-id (peek queue)]
-          (->> (rx/merge
-                (rx/of (persist-commit commit-id))
-                (->> stream
-                     (rx/filter (ptk/type? ::commit-persisted))
-                     (rx/map deref)
-                     (rx/filter #(= commit-id (:id %)))
-                     (rx/take 1)
-                     ;; (rx/observe-on :async)
-                     (rx/mapcat (fn [_]
-                                  (rx/of (discard-commit commit-id)
-                                         (run-persistence-task))))))
-               (rx/take-until
-                (rx/filter (ptk/type? ::run-persistence-task) stream)))
           (do
-            (reset! running false)
-            nil))))))
+            (log/dbg :hint "run-persistence-task" :commit-id (str commit-id))
+            (->> (rx/merge
+                  (rx/of (persist-commit commit-id))
+                  (->> stream
+                       (rx/filter (ptk/type? ::commit-persisted))
+                       (rx/map deref)
+                       (rx/filter #(= commit-id (:id %)))
+                       (rx/take 1)
+                       ;; (rx/observe-on :async)
+                       (rx/mapcat (fn [_]
+                                    (rx/of (discard-commit commit-id)
+                                           (run-persistence-task))))))
+                 (rx/take-until
+                  (rx/filter (ptk/type? ::run-persistence-task) stream))))
 
-(defn- append-commit
-  "Event used internally to append the current change to the
-  persistence queue."
-  [{:keys [id] :as commit}]
-  (ptk/reify ::append-commit
-    ptk/UpdateEvent
-    (update [_ state]
-      (update state :persistence
-              (fn [state]
-                (-> state
-                    (update :queue queue-conj id)
-                    (update :index assoc id commit)))))
+          (rx/of (update-status :saved)))))))
 
-    ptk/WatchEvent
-    (watch [_ state stream]
-      (when (compare-and-set! running false true)
-        (rx/of (run-persistence-task))))))
-
-(defn merge-commit
+(defn- merge-commit
   [buffer]
   (->> (rx/from (group-by :file-id buffer))
        (rx/map (fn [[file-id [item :as commits]]]
@@ -167,11 +188,17 @@
 
             notifier-s
             (->> commits-s
-                 (rx/debounce 1000)
+                 (rx/debounce 3000)
                  (rx/tap #(log/trc :hint "persistence beat")))]
 
 
         (rx/merge
+         (->> commits-s
+              (rx/debounce 200)
+              (rx/map (fn [_]
+                        (update-status :pending)))
+              (rx/take-until stoper-s))
+
          ;; Here we watch for local commits, buffer them in a small
          ;; chunks (very near in time commits) and append them to the
          ;; persistence queue

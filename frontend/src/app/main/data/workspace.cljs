@@ -355,7 +355,9 @@
                                         :redo-changes redo-changes
                                         :undo-group undo-group
                                         :tags tags}]
-                             (rx/of (dwu/append-undo entry stack-undo?))))))
+                             (rx/of (dwu/append-undo entry stack-undo?)))
+                           (rx/empty))))
+
             (rx/take-until
              (rx/filter (ptk/type? ::finalize-file) stream)))))
 
