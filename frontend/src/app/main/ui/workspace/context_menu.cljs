@@ -448,12 +448,13 @@
         single?                    (= (count shapes) 1)
         objects                    (deref refs/workspace-page-objects)
         any-in-copy?               (some true? (map #(ctn/has-any-copy-parent? objects %) shapes))
+        any-contains-main?         (some true? (map #(ctn/has-any-contains-main? objects %) shapes))
         heads                      (filter ctk/instance-head? shapes)
         components-menu-entries    (cmm/generate-components-menu-entries heads components-v2)
         do-add-component           #(st/emit! (dwl/add-component))
         do-add-multiple-components #(st/emit! (dwl/add-multiple-components))]
     [:*
-     (when-not any-in-copy? ;; We don't want to change the structure of component copies
+     (when-not (or any-in-copy? any-contains-main?) ;; We don't want to change the structure of component copies
        [:*
         [:& menu-separator]
 

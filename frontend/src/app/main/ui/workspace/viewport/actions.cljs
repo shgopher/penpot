@@ -448,8 +448,8 @@
                final-x (- (:x viewport-coord) (/ (:width shape) 2))
                final-y (- (:y viewport-coord) (/ (:height shape) 2))]
            (st/emit! (dwl/instantiate-component file-id
-                                                (:id component)
-                                                (gpt/point final-x final-y))))
+                       (:id component)
+                       (gpt/point final-x final-y))))
 
          ;; Will trigger when the user drags an image from a browser
          ;; to the viewport (firefox and chrome do it a bit different
@@ -492,8 +492,8 @@
                        :object-id asset-id
                        :name asset-name}]
            (st/emit! (dwm/clone-media-object
-                      (with-meta params
-                        {:on-success #(st/emit! (dwm/image-uploaded % viewport-coord))}))))
+                       (with-meta params
+                         {:on-success #(st/emit! (dwm/image-uploaded % viewport-coord))}))))
 
          ;; Will trigger when the user drags a file from their file explorer into the viewport
          ;; Or the user pastes an image

@@ -292,19 +292,20 @@
          objects         (:objects container)
          unames          (volatile! (cfh/get-used-names objects))
 
+         ;; TODO: detect main containing main
          frame-id        (or force-frame-id
-                             (ctst/get-frame-id-by-position objects
-                                                            (gpt/add orig-pos delta)
-                                                            {:skip-components? true
-                                                             :bottom-frames? true}))
+                           (ctst/get-frame-id-by-position objects
+                             (gpt/add orig-pos delta)
+                             {:skip-components? true
+                              :bottom-frames? true}))
          ids-map         (volatile! {})
 
          update-new-shape
          (fn [new-shape original-shape]
            (let [new-name (:name new-shape)
                  root?    (or (ctk/instance-root? original-shape)   ; If shape is inside a component (not components-v2)
-                              (nil? (:parent-id original-shape)))]  ; we detect it by having no parent)
-
+                            (nil? (:parent-id original-shape)))]  ; we detect it by having no parent)
+             
              (when root?
                (vswap! unames conj new-name))
 
@@ -325,28 +326,28 @@
                (dissoc :shape-ref)
 
                (and (not main-instance?)
-                    (or components-v2                        ; In v1, shape-ref points to the remote instance
-                        (nil? (:shape-ref original-shape)))) ; in v2, shape-ref points to the near instance
+                 (or components-v2                        ; In v1, shape-ref points to the remote instance
+                   (nil? (:shape-ref original-shape)))) ; in v2, shape-ref points to the near instance
                (assoc :shape-ref (:id original-shape))
 
                (nil? (:parent-id original-shape))
                (assoc :component-id (:id component)
-                      :component-file (:id library-data)
-                      :component-root true
-                      :name new-name)
+                 :component-file (:id library-data)
+                 :component-root true
+                 :name new-name)
 
                (some? (:parent-id original-shape)) ;; On v2 we have removed the parent-id for component roots (see above)
                (dissoc :component-root))))
 
          [new-shape new-shapes _]
          (ctst/clone-object component-shape
-                            frame-id
-                            (if components-v2 (:objects component-page) (:objects component))
-                            update-new-shape
-                            (fn [object _] object)
-                            force-id
-                            keep-ids?
-                            frame-id)
+           frame-id
+           (if components-v2 (:objects component-page) (:objects component))
+           update-new-shape
+           (fn [object _] object)
+           force-id
+           keep-ids?
+           frame-id)
 
 
          ;; Fix empty parent-id and remap all grid cells to the new ids.
@@ -378,3 +379,11 @@
       (if (ctk/in-component-copy? parent)
         true
         (has-any-copy-parent? objects (:parent-id shape))))))
+
+(defn has-any-contains-main?
+  "Check if the shape has any children that is a main component."
+  [objects shape]
+  (let []
+    (if (:main-instance shape)
+      true
+      (some true? (map #(has-any-contains-main? objects (get objects %)) (:shapes shape))))))

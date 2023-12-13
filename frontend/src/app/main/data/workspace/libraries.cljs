@@ -339,12 +339,15 @@
   (ptk/reify ::add-component
     ptk/WatchEvent
     (watch [_ state _]
-      (let [objects       (wsh/lookup-page-objects state)
-            selected      (->> (wsh/lookup-selected state)
-                               (cfh/clean-loops objects)
-                               (remove #(ctn/has-any-copy-parent? objects (get objects %)))) ;; We don't want to change the structure of component copies
-            components-v2 (features/active-feature? state "components/v2")]
-        (rx/of (add-component2 selected components-v2))))))
+      (let [objects            (wsh/lookup-page-objects state)
+            selected           (->> (wsh/lookup-selected state)
+                                    (cfh/clean-loops objects)
+                                    (remove #(ctn/has-any-copy-parent? objects (get objects %)))) ;; We don't want to change the structure of component copies
+            components-v2      (features/active-feature? state "components/v2")
+            any-contains-main? (some true? (map #(ctn/has-any-contains-main? objects (get objects %)) selected))]
+        (println "----" any-contains-main? selected)
+        (when-not any-contains-main?
+          (rx/of (add-component2 selected components-v2)))))))
 
 (defn add-multiple-components
   "Add several new components to current file library, from the currently selected shapes."
