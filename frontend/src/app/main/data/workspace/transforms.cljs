@@ -24,6 +24,7 @@
    [app.common.types.modifiers :as ctm]
    [app.common.types.shape-tree :as ctst]
    [app.common.types.shape.layout :as ctl]
+   [app.common.uuid :as uuid]
    [app.main.data.workspace.changes :as dch]
    [app.main.data.workspace.collapse :as dwc]
    [app.main.data.workspace.modifiers :as dwm]
@@ -36,8 +37,7 @@
    [app.util.keyboard :as kbd]
    [app.util.mouse :as mse]
    [beicon.core :as rx]
-   [potok.core :as ptk]
-   [app.common.uuid :as uuid]))
+   [potok.core :as ptk]))
 
 ;; -- Helpers --------------------------------------------------------
 
@@ -465,27 +465,27 @@
 
              exclude-frames
              (into #{}
-               (filter (partial cfh/frame-shape? objects))
-               (cfh/selected-with-children objects selected))
+                   (filter (partial cfh/frame-shape? objects))
+                   (cfh/selected-with-children objects selected))
 
              exclude-frames-siblings
              (into exclude-frames
-               (comp (mapcat (partial cfh/get-siblings-ids objects))
-                 (filter (partial ctl/any-layout-immediate-child-id? objects)))
-               selected)
+                   (comp (mapcat (partial cfh/get-siblings-ids objects))
+                         (filter (partial ctl/any-layout-immediate-child-id? objects)))
+                   selected)
 
              position (->> ms/mouse-position
                            (rx/map #(gpt/to-vec from-position %)))
 
              snap-delta (rx/concat
                          ;; We send the nil first so the stream is not waiting for the first value
-                          (rx/of nil)
-                          (->> position
-                               (rx/throttle 20)
-                               (rx/switch-map
-                                 (fn [pos]
-                                   (->> (snap/closest-snap-move page-id shapes objects layout zoom focus pos)
-                                        (rx/map #(vector pos %)))))))]
+                         (rx/of nil)
+                         (->> position
+                              (rx/throttle 20)
+                              (rx/switch-map
+                               (fn [pos]
+                                 (->> (snap/closest-snap-move page-id shapes objects layout zoom focus pos)
+                                      (rx/map #(vector pos %)))))))]
          (if (empty? shapes)
            (rx/of (finish-transform))
            (let [move-stream
@@ -502,7 +502,6 @@
                        (fn [[move-vector mod?]]
                          (let [position       (gpt/add from-position move-vector)
                                exclude-frames (if mod? exclude-frames exclude-frames-siblings)
-
                                target-frame   (ctst/top-nested-frame objects position exclude-frames)
                                ;; TODO comment
                                target-frame   (if (and
@@ -511,16 +510,15 @@
                                                 uuid/zero
                                                 target-frame)
 
-                               ;; TODO detect main inside copy                               
-                               
-                              ;;  Crear un componente (con menú o ctrl+k) cuando ya tienes otro seleccionado (o en hijos de lo seleccionado)
-                              ;;  Cortar un componente y pegarlo en otro*
-                              ;;  Arrastrar un componente a otro* en las layers
-                              ;;  Arrastrar un componente a otro* en el workspace
-                              ;;  En PRO se permite, así que hay que decidir en que se convierte esa situación en la migración
-                              ;;  No sé si @ester en su Main Styles o alguno de estos grandes lo usa
-                              ;;  (*) Otro componente a cualquier nivel de padre, no necesariamente su padre directo                              
-                               
+                               ;; TODO detect main inside copy
+
+                               ;;  Crear un componente (con menú o ctrl+k) cuando ya tienes otro seleccionado (o en hijos de lo seleccionado)
+                               ;;  Cortar un componente y pegarlo en otro*
+                               ;;  Arrastrar un componente a otro* en las layers
+                               ;;  Arrastrar un componente a otro* en el workspace
+                               ;;  En PRO se permite, así que hay que decidir en que se convierte esa situación en la migración
+                               ;;  No sé si @ester en su Main Styles o alguno de estos grandes lo usa
+                               ;;  (*) Otro componente a cualquier nivel de padre, no necesariamente su padre directo
                                flex-layout?   (ctl/flex-layout? objects target-frame)
                                grid-layout?   (ctl/grid-layout? objects target-frame)
                                drop-index     (when flex-layout? (gslf/get-drop-index target-frame objects position))
@@ -551,7 +549,7 @@
                             is-component-copy? (ctk/in-component-copy? (get objects target-frame))]
 
                         (cond-> (dwm/create-modif-tree ids (ctm/move-modifiers move-vector))
-                          (and (not nesting-loop?) (not is-component-copy?) #_(not any-contains-main?))
+                          (and (not nesting-loop?) (not is-component-copy?))
                           (dwm/build-change-frame-modifiers objects selected target-frame drop-index cell-data)
                           :always
                           (dwm/set-modifiers false false {:snap-ignore-axis snap-ignore-axis}))))))
