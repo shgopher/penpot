@@ -252,3 +252,32 @@
        (catch :default e (reject e))))))
 
 (def empty-png-size (memoize empty-png-size*))
+
+
+(defn throttle
+  [f delay]
+  (let [state #js {:lastExecTime 0
+                   :timeoutId nil
+                   :context nil
+                   :args nil}
+        execute (fn []
+                  (.apply f
+                          (unchecked-get state "content")
+                          (unchecked-get state "args"))
+                  (unchecked-set state "lastExecTime" (js/Date.now))
+                  (unchecked-set state "timeoutId" nil))]
+
+    (fn []
+      (let [ctime (js/Date.now)
+            ltime (unchecked-get state "lastExecTime")]
+        (unchecked-set state "content" (js-this))
+        (unchecked-set state "args" (js-arguments))
+        (if (>= (- ctime ltime) delay)
+          (let [timeout-id (unchecked-get state "timeoutId")]
+            (when (some? timeout-id)
+              (js/clearTimeout timeout-id)
+              (unchecked-set state "timeoutId" nil))
+            (execute))
+          (when (nil? (unchecked-get state "timeoutId"))
+            (unchecked-set state "timeoutId"
+                           (js/setTimeout execute (- delay ctime ltime)))))))))

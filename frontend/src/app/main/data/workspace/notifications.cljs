@@ -16,10 +16,12 @@
    [app.main.data.workspace.changes :as dch]
    [app.main.data.workspace.libraries :as dwl]
    [app.main.data.workspace.persistence :as dwp]
+   [app.main.store :as st]
    [app.util.globals :refer [global]]
    [app.util.mouse :as mse]
    [app.util.object :as obj]
    [app.util.time :as dt]
+   [app.util.webapi :as wapi]
    [beicon.core :as rx]
    [clojure.set :as set]
    [potok.core :as ptk]))
@@ -80,10 +82,13 @@
 
                              ;; Emit to all other connected users the current pointer
                              ;; position changes.
-                             (->> stream
-                                  (rx/filter mse/pointer-event?)
-                                  (rx/sample 50)
-                                  (rx/map #(handle-pointer-send file-id (:pt %)))))
+                             (let [send-pointer! #(st/emit! (handle-pointer-send file-id (:pt %)))
+                                   send-pointer! (wapi/throttle send-pointer! 50)]
+
+                               (->> stream
+                                    (rx/filter mse/pointer-event?)
+                                    (rx/tap send-pointer!)
+                                    (rx/ignore))))
 
                             (rx/take-until stoper))]
 
