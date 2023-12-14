@@ -307,6 +307,10 @@
 
          frame-set (into #{} (map #(dm/get-prop % :id)) frames)]
 
+     (println "frames" (map :name frames))
+
+     (println "frames" (map :id frames))
+        
      (loop [current-shape (first frames)]
        (let [child-frame-id (d/seek #(contains? frame-set %)
                                     (reverse (:shapes current-shape)))]

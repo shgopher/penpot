@@ -509,9 +509,11 @@
                                                     (ctn/has-any-contains-main? objects (get objects target-frame)))
                                                 uuid/zero
                                                 target-frame)
+                               
+                               _ (println "target-frame" target-frame)
 
                                ;; TODO detect main inside copy
-
+                               
                                ;;  Crear un componente (con menú o ctrl+k) cuando ya tienes otro seleccionado (o en hijos de lo seleccionado)
                                ;;  Cortar un componente y pegarlo en otro*
                                ;;  Arrastrar un componente a otro* en las layers

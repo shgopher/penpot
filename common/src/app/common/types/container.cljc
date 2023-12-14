@@ -382,7 +382,6 @@
 (defn has-any-contains-main?
   "Check if the shape has any children that is a main component."
   [objects shape]
-  (let []
-    (if (:main-instance shape)
-      true
-      (some true? (map #(has-any-contains-main? objects (get objects %)) (:shapes shape))))))
+  (if (:main-instance shape)
+    true
+    (some true? (map #(has-any-contains-main? objects (get objects %)) (:shapes shape)))))
