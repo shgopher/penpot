@@ -1840,10 +1840,12 @@
                                         (< 1 (count pobjects))
                                         (= 1 (count tree-root)))
                   all-objects           (merge page-objects pobjects)
+                  
+                  ;; TODO: can I use this? --- cut main and paste into another main
                   comps-nesting-loop?   (not (->> (keys pobjects)
                                                   (map #(cfh/components-nesting-loop? all-objects % (:id base)))
                                                   (every? nil?)))]
-
+(println "comps-nesting-loop?" comps-nesting-loop?)
               (cond
                 comps-nesting-loop?
                 ;; Avoid placing a shape as a direct or indirect child of itself,
@@ -1967,7 +1969,7 @@
               ;; We don't want to change the structure of component
               ;; copies If the parent-id or the frame-id are
               ;; component-copies, we need to get the first not copy
-              ;; parent
+              ;; parent ;;TODO CHECK
               parent-id   (:id (ctn/get-first-not-copy-parent (:objects page) parent-id))
               frame-id    (:id (ctn/get-first-not-copy-parent (:objects page) frame-id))
 
