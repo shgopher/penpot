@@ -344,8 +344,11 @@
                                     (cfh/clean-loops objects)
                                     (remove #(ctn/has-any-copy-parent? objects (get objects %)))) ;; We don't want to change the structure of component copies
             components-v2      (features/active-feature? state "components/v2")
-            any-contains-main? (some true? (map #(ctn/has-any-contains-main? objects (get objects %)) selected))]
-        (println "----" any-contains-main? selected)
+            
+            selected-roots (map #(ctn/get-instance-root objects (get objects %)) selected)
+
+            any-contains-main? (some true? (map #(ctn/has-any-contains-main? objects %) selected-roots))]
+        (println "----" any-contains-main? selected-roots)
         (when-not any-contains-main?
           (rx/of (add-component2 selected components-v2)))))))
 
@@ -360,9 +363,10 @@
             selected      (->> (wsh/lookup-selected state)
                                (cfh/clean-loops objects)
                                (remove #(ctn/has-any-copy-parent? objects (get objects %)))) ;; We don't want to change the structure of component copies
+            ;; TODO: this should work the same way
             added-components (map
-                              #(add-component2 [%] components-v2)
-                              selected)
+                               #(add-component2 [%] components-v2)
+                               selected)
             undo-id (js/Symbol)]
         (rx/concat
          (rx/of (dwu/start-undo-transaction undo-id))

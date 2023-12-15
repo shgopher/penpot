@@ -448,7 +448,8 @@
         single?                    (= (count shapes) 1)
         objects                    (deref refs/workspace-page-objects)
         any-in-copy?               (some true? (map #(ctn/has-any-copy-parent? objects %) shapes))
-        any-contains-main?         (some true? (map #(ctn/has-any-contains-main? objects %) shapes))
+        any-contains-main?         (some true? (map #(ctn/has-any-contains-main? objects %) (map (partial ctn/get-instance-root objects) shapes)))
+        ;; TODO check hijos
         heads                      (filter ctk/instance-head? shapes)
         components-menu-entries    (cmm/generate-components-menu-entries heads components-v2)
         do-add-component           #(st/emit! (dwl/add-component))
