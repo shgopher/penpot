@@ -500,20 +500,30 @@
 
                       (rx/map
                        (fn [[move-vector mod?]]
-                         (let [position       (gpt/add from-position move-vector)
-                               exclude-frames (if mod? exclude-frames exclude-frames-siblings)
-                               target-frame   (ctst/top-nested-frame objects position exclude-frames)
+                         (let [position          (gpt/add from-position move-vector)
+                               exclude-frames    (if mod? exclude-frames exclude-frames-siblings)
+                               target-frame      (ctst/top-nested-frame objects position exclude-frames)
+                               root-target-frame (ctn/get-instance-root objects (get objects target-frame))
+
+                              ;;  _ (println "top" target-frame (:id (ctn/get-instance-root objects (get objects target-frame))))
+
                                ;; TODO comment
-                               target-frame   (if (and
+                               target-frame   (if
+                                                (or
+                                                  ;; Main't components can't be moved inside another components (main or copies)
+                                                  (and
                                                     (some #(ctn/has-any-contains-main? objects (get objects %)) ids)
-                                                    (ctn/has-any-contains-main? objects (get objects target-frame)))
+                                                    root-target-frame)
+                                                  ;; Copy compontens can't be moved inside other copies
+                                                  (and
+                                                    (some #(ctn/has-any-in-component-copy? objects (get objects %)) ids)
+                                                    (ctk/in-component-copy? root-target-frame)))
+
                                                 uuid/zero
                                                 target-frame)
-                               
-                               _ (println "target-frame" target-frame)
 
-                               ;; TODO detect main inside copy
-                               
+                               _ (println "target-frame" target-frame )
+
                                ;;  Crear un componente (con menú o ctrl+k) cuando ya tienes otro seleccionado (o en hijos de lo seleccionado)
                                ;;  Cortar un componente y pegarlo en otro*
                                ;;  Arrastrar un componente a otro* en las layers

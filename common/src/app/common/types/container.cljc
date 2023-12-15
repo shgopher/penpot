@@ -385,3 +385,10 @@
   (if (:main-instance shape)
     true
     (some true? (map #(has-any-contains-main? objects (get objects %)) (:shapes shape)))))
+
+(defn has-any-in-component-copy?
+  "Check if the shape has any children that is a main component."
+  [objects shape]
+  (if (ctk/in-component-copy? shape)
+    true
+    (some true? (map #(has-any-in-component-copy? objects (get objects %)) (:shapes shape)))))
