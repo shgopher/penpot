@@ -392,3 +392,9 @@
   (if (ctk/in-component-copy? shape)
     true
     (some true? (map #(has-any-in-component-copy? objects (get objects %)) (:shapes shape)))))
+
+
+
+;; función más general de ¿puedo añadir una instancia (main o copia) aquí?
+;; the comment!
+;; We don't want to change the structure of component copies
